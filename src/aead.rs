@@ -157,9 +157,10 @@ fn poly1305(key: &[u8; 32], msg: &[u8]) -> [u8; 16] {
 }
 
 fn tag(key: &[u8; 32], nonce: &[u8; 12], aad: &[u8], ct: &[u8]) -> [u8; 16] {
-    let block0 = chacha_block(key, 0, nonce);
+    let mut block0 = chacha_block(key, 0, nonce);
     let mut otk = [0u8; 32];
     otk.copy_from_slice(&block0[..32]);
+    crate::wipe(&mut block0);
     let pad = |n: usize| (16 - n % 16) % 16;
     let mut mac = Vec::with_capacity(aad.len() + ct.len() + 48);
     mac.extend_from_slice(aad);

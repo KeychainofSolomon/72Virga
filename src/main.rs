@@ -16,6 +16,9 @@ virga: the Operator's wand for Annulus
   virga adde <new-stick> [<stick>]
         with a remaining wand, make a new spare on a stick that holds no wand
   virga quaere                 list the wands plugged into this computer
+  virga perfice <stick>        finish a making that was interrupted (puts VIRGA.novum in place)
+
+On Windows, `virga` with nothing after it (or a double-click) opens the wand's window.
 
 <stick> is the drive or folder holding the VIRGA folder (for example E:\\). Left out,
 the one wand plugged in is used, or the folder named by the VIRGA variable.
@@ -189,6 +192,15 @@ fn run(args: &[String]) -> Result<(), String> {
             );
             Ok(())
         }
+        ("perfice", [stick]) => {
+            let v = virga::perfice(Path::new(stick))?;
+            println!(
+                "{} is in place on {}.",
+                breviter(v.signum()),
+                v.radix().display()
+            );
+            Ok(())
+        }
         ("quaere", []) => {
             let found = virga::quaere();
             if found.is_empty() {
@@ -212,6 +224,11 @@ fn run(args: &[String]) -> Result<(), String> {
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    #[cfg(windows)]
+    if args.is_empty() {
+        virga::fenestra::app();
+        return ExitCode::SUCCESS;
+    }
     match run(&args) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {

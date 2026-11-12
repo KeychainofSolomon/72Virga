@@ -462,7 +462,10 @@ fn stage(stick: &Path, v: &Virga) -> Result<PathBuf, String> {
 }
 
 /// Makes the wand and its spare at one stroke, on two virgin sticks. Both are written in
-/// full, then both are put in place; if anything fails, neither is.
+/// full, then both are put in place; if a step fails, what was put in place is taken back.
+/// Two sticks cannot be changed in one indivisible act: if the power fails between the two
+/// last steps, the spare's stick holds a finished but unplaced wand (`VIRGA.novum`), and
+/// [`perfice`] puts it in place (audit V05).
 pub fn fac(
     prima: &Path,
     secunda: &Path,
@@ -473,6 +476,9 @@ pub fn fac(
 ) -> Result<(Virga, Virga), String> {
     verba_valida(verba_magistri, verba_ritus)?;
     sanus(nomen)?;
+    if !labor.admissible() {
+        return Err("a wand is made only with the standard amount of work".into());
+    }
     let a = virgin(prima)?;
     let b = virgin(secunda)?;
     if a == b || a.starts_with(&b) || b.starts_with(&a) {
@@ -528,6 +534,8 @@ pub fn fac(
             "cannot put the spare in place: {e}; neither was made"
         ));
     }
+    sync_dir(&a);
+    sync_dir(&b);
     va.radix = a.join(DIR);
     vb.radix = b.join(DIR);
     Ok((va, vb))
@@ -546,6 +554,9 @@ pub fn adde(
         return Err("a revoked wand makes nothing".into());
     }
     verba_valida(verba_magistri, verba_ritus)?;
+    if !labor.admissible() {
+        return Err("a wand is made only with the standard amount of work".into());
+    }
     let target = virgin(stick)?;
     let master = remaining.solve(Secretum::Magister, verba_magistri)?;
     remaining.solve(Secretum::Ritus, verba_ritus)?;
@@ -563,14 +574,50 @@ pub fn adde(
         labor,
         stirps.clone(),
     )?;
+    // The order matters (audit V05): the new spare is written in full first, then the
+    // remaining wand records it, then the spare is put in place. If the last step is
+    // interrupted, the spare waits finished as `VIRGA.novum` and `perfice` places it.
     let staged = stage(&target, &v)?;
-    fs::rename(&staged, target.join(DIR)).map_err(|e| {
+    if let Err(e) = remaining.scribe_stirpem(&stirps) {
         let _ = fs::remove_dir_all(&staged);
-        format!("cannot put the spare in place: {e}")
+        return Err(e);
+    }
+    fs::rename(&staged, target.join(DIR)).map_err(|e| {
+        format!(
+            "the spare is made but not yet in place ({e}): run `virga perfice {}`",
+            target.display()
+        )
     })?;
+    sync_dir(&target);
     v.radix = target.join(DIR);
-    remaining.scribe_stirpem(&stirps)?;
     Ok(v)
+}
+
+/// Makes sure a renamed folder is on the stick, where the system allows it.
+fn sync_dir(dir: &Path) {
+    if let Ok(f) = fs::File::open(dir) {
+        let _ = f.sync_all();
+    }
+}
+
+/// Finishes an interrupted stroke: a stick holding a complete wand in `VIRGA.novum` and no
+/// `VIRGA` has it put in place, once it is checked to be whole and of its lineage.
+pub fn perfice(stick: &Path) -> Result<Virga, String> {
+    let staged = stick.join(STAGED);
+    if stick.join(DIR).exists() {
+        return Err(format!("{} already holds a wand", stick.display()));
+    }
+    if !staged.join(FILE).is_file() {
+        return Err(format!(
+            "there is no unfinished wand on {}",
+            stick.display()
+        ));
+    }
+    Virga::aperi(&staged).map_err(|e| format!("the unfinished wand is not whole: {e}"))?;
+    fs::rename(&staged, stick.join(DIR))
+        .map_err(|e| format!("cannot put the wand in place: {e}"))?;
+    sync_dir(stick);
+    Virga::aperi(stick)
 }
 
 /// Where a plugged-in wand may be: every drive letter on Windows, the usual mount points

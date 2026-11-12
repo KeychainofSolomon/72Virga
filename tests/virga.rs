@@ -238,3 +238,35 @@ fn diverged_copies_are_refused() {
     assert!(Stirps::concilia(&wand.stirps, &spare.stirps).is_err());
     let _ = (va, vb);
 }
+
+#[test]
+fn a_wand_asking_for_other_work_is_refused_before_any_work() {
+    let (va, _, a, _) = pair("labor");
+    let own = fs::read_to_string(va.radix().join("virga.txt")).unwrap();
+    // within the old bounds, but not the work a wand is made with (audit V02)
+    let heavy = own.replacen("arca\tritus\t4\t1\t1\t", "arca\tritus\t20\t16\t1\t", 1);
+    assert_ne!(heavy, own);
+    fs::write(va.radix().join("virga.txt"), heavy).unwrap();
+    let e = Virga::aperi(&a).unwrap_err();
+    assert!(e.contains("inadmissible"), "{e}");
+    let (c, d) = (stick("labor-c"), stick("labor-d"));
+    let other = Labor {
+        log_n: 10,
+        r: 8,
+        p: 1,
+    };
+    assert!(virga::fac(&c, &d, M, R, "", other).is_err());
+}
+
+#[test]
+fn an_interrupted_stroke_is_finished() {
+    let (_, vb, _, b) = pair("perfice");
+    // as if the power failed before the spare was put in place
+    fs::rename(vb.radix(), b.join("VIRGA.novum")).unwrap();
+    assert!(Virga::aperi(&b).is_err());
+    let v = virga::perfice(&b).unwrap();
+    assert_eq!(v.signum(), vb.signum());
+    assert!(virga::perfice(&b).is_err(), "only once");
+    let empty = stick("perfice-empty");
+    assert!(virga::perfice(&empty).is_err());
+}

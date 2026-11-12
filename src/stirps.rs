@@ -272,6 +272,18 @@ impl Stirps {
         &self.hashes[0]
     }
 
+    /// How many acts the lineage holds.
+    pub fn longitudo(&self) -> usize {
+        self.acta.len()
+    }
+
+    /// The chain's hash after the first `n` acts, if the lineage has that many.
+    pub fn caput(&self, n: usize) -> Option<&str> {
+        n.checked_sub(1)
+            .and_then(|i| self.hashes.get(i))
+            .map(String::as_str)
+    }
+
     pub fn acta(&self) -> &[Actus] {
         &self.acta
     }

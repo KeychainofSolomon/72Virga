@@ -21,6 +21,8 @@
 #[doc(hidden)]
 pub mod aead;
 mod ed25519;
+#[cfg(windows)]
+pub mod fenestra;
 pub mod os;
 pub mod scrypt;
 pub mod sha2;
@@ -31,7 +33,7 @@ mod virga;
 pub use scrypt::Labor;
 pub use stirps::{Actus, Stirps, MAX_ACTA};
 pub use virga::{
-    adde, fac, quaere, vinculum_valet, Ordo, Secretum, Status, Virga, ANCORAE, DIR, FILE,
+    adde, fac, perfice, quaere, vinculum_valet, Ordo, Secretum, Status, Virga, ANCORAE, DIR, FILE,
     MIN_VERBA, STIRPS,
 };
 

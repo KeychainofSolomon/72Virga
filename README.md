@@ -26,6 +26,14 @@ The two sets of words must differ, so words spoken during a rite can never open 
 
 ## Using it (Windows)
 
+**The window:** double-click `virga.exe` (in `target\release` after building), or run
+`virga` with nothing after it. It shows the wands plugged in and lets you check your words,
+make the wand, revoke a lost wand, make a new spare, or finish an interrupted making. Word
+fields show a dot per character, how many you typed, and whether a repeated entry agrees.
+When Annulus needs your words, it asks in the same kind of window.
+
+**Or at the command prompt:**
+
 ```
 virga fac E:\ F:\ --nomen "my wand"     make the wand on E: and its spare on F:, at one stroke
 virga inspice                            show the wand plugged in, and its lineage
@@ -33,6 +41,7 @@ virga proba                              check that your words open both secrets
 virga revoca D85E-25B4 F:\               the spare on F: revokes the lost wand D85E-25B4…
 virga adde G:\ F:\                       the wand on F: makes a new spare on G:
 virga quaere                             list the wands plugged in
+virga perfice E:\                        finish a making interrupted part-way (puts VIRGA.novum in place)
 ```
 
 Then, in Annulus: `annulus sanci` once per house (ratifies the Constitution with your
@@ -52,7 +61,9 @@ Keep the spare apart from the wand. Write down both fingerprints.
 
 ## The honest limit
 
-Anyone who has a stick **and** your words holds the wand (`operator.md` §8.6). A thief
+Anyone who has a stick **and** your words holds the wand (`operator.md` §8.6). Choose
+words with real chance in them (several random words is best): anyone with a copy of the
+stick can try guesses, and scrypt only makes each guess slow. A thief
 with both could also revoke the spare before you revoke the stolen wand. A hardware key
 would keep the secret inside the device; `virga` may support one later without changing
 these rules. Your words, in a program's memory, are not wiped (only the opened keys are).
@@ -67,9 +78,16 @@ vectors and against an independent implementation (Python's `cryptography`):
 - ChaCha20-Poly1305 (RFC 8439) to lock each secret; a secret moved to another slot or
   another wand does not open
 - SHA-256 and SHA-512 (FIPS 180-4), round constants computed from the primes
+- public keys and nonces of small order are refused, and a wand file may ask only for the
+  standard scrypt work (an outside review, 2026-11-13)
 
 Randomness comes from the operating system (`BCryptGenRandom` on Windows, `/dev/urandom`
-elsewhere); the only `unsafe` code is those two Windows calls and the console echo switch.
+elsewhere). The only `unsafe` code is in `os.rs` (randomness and the console echo) and
+`fenestra.rs` (the window, plain Windows controls). At a terminal where the words cannot be
+hidden, they are not asked.
+
+Making a wand and its spare cannot be one indivisible act across two sticks: if the power
+fails between the last two steps, `virga perfice` finishes it.
 
 ```
 cargo test        # the vectors and the attacks on the wand

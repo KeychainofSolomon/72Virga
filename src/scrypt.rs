@@ -118,9 +118,18 @@ impl Labor {
         p: 1,
     };
 
-    /// The most any wand file may ask for, so that a doctored file cannot exhaust memory.
+    /// Light work, for tests only (the `probatio` feature).
+    pub const LEVIS: Labor = Labor {
+        log_n: 4,
+        r: 1,
+        p: 1,
+    };
+
+    /// Whether a wand may ask for this work: only the work a real wand is made with, so a
+    /// doctored file cannot make the computer spend gigabytes before the words are even
+    /// tried (audit V02). Test builds also admit [`Labor::LEVIS`].
     pub fn admissible(&self) -> bool {
-        (1..=20).contains(&self.log_n) && (1..=16).contains(&self.r) && (1..=4).contains(&self.p)
+        *self == Labor::VERA || (cfg!(feature = "probatio") && *self == Labor::LEVIS)
     }
 }
 

@@ -152,3 +152,26 @@ fn chacha20_poly1305_independent() {
         assert!(virga::aead::open(&key, &nonce, &aad, &sealed).is_none());
     }
 }
+
+#[test]
+fn ed25519_refuses_small_order_keys_and_nonces() {
+    // the identity as a public key, with R = identity and S = 0, satisfies the equation
+    // for every message (audit V03)
+    let mut identity = [0u8; 32];
+    identity[0] = 1;
+    let mut sig = [0u8; 64];
+    sig[0] = 1;
+    assert!(!virga::verifica(&hex(&identity), b"anything", &hex(&sig)));
+    assert!(!virga::publica_valida(&hex(&identity)));
+    // a point of order 2, (0, -1): y = p - 1
+    let mut minus_one = [0xffu8; 32];
+    minus_one[0] = 0xec;
+    minus_one[31] = 0x7f;
+    assert!(!virga::publica_valida(&hex(&minus_one)));
+    // an honest signature whose R is swapped for a small-order point is refused
+    let k = Clavis::ex_semine([11; 32]);
+    let mut s = unhex(&k.signa(b"m")).unwrap();
+    s[..32].copy_from_slice(&identity);
+    assert!(!virga::verifica(&k.publica(), b"m", &hex(&s)));
+    assert!(virga::publica_valida(&k.publica()));
+}

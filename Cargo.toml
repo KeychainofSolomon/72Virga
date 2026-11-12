@@ -17,6 +17,13 @@ path = "src/main.rs"
 
 [dependencies]
 
+[features]
+# admits light work for wands made in tests; never for a real wand
+probatio = []
+
+[dev-dependencies]
+virga = { path = ".", features = ["probatio"] }
+
 [profile.release]
 opt-level = 3
 lto = true

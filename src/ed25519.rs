@@ -316,6 +316,15 @@ impl Point {
         }
     }
 
+    /// Whether `[8]self` is the identity: the point lies in the small subgroup (the
+    /// identity among them), and no honest key or nonce is such a point.
+    fn small_order(self) -> bool {
+        let p = self.add(self);
+        let p = p.add(p);
+        let p = p.add(p);
+        p.x.is_zero()
+    }
+
     fn neg(self) -> Point {
         Point {
             x: self.x.neg(),
@@ -479,15 +488,20 @@ pub(crate) fn sign(key: &Expanded, msg: &[u8]) -> [u8; 64] {
     sig
 }
 
+/// Whether `public` is a usable public key: a canonical encoding of a point outside the
+/// small subgroup.
 pub(crate) fn decodes(public: &[u8; 32]) -> bool {
-    Point::decode(public).is_some()
+    Point::decode(public).is_some_and(|p| !p.small_order())
 }
 
 pub fn verify(public: &[u8; 32], msg: &[u8], sig: &[u8; 64]) -> bool {
-    let Some(a) = Point::decode(public) else {
+    let Some(a) = Point::decode(public).filter(|p| !p.small_order()) else {
         return false;
     };
     let r: [u8; 32] = sig[..32].try_into().unwrap();
+    if Point::decode(&r).is_none_or(|p| p.small_order()) {
+        return false;
+    }
     let s: [u8; 32] = sig[32..].try_into().unwrap();
     if !below_l(&s) {
         return false;
