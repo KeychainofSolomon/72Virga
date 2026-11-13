@@ -142,13 +142,13 @@ const EM_LIMITTEXT: u32 = 0x00C5;
 const IDC_ARROW: usize = 32512;
 const SW_SHOW: i32 = 5;
 
-// Colours as 0x00BBGGRR: the dark ground and the gold of the binding page.
-const GROUND: u32 = 0x000d_1114;
-const FIELD: u32 = 0x0018_1d22;
-const GOLD: u32 = 0x0058_b4d4;
-const PALE: u32 = 0x00c8_d8e0;
-const DIM: u32 = 0x0070_8088;
-const RED: u32 = 0x0060_60e0;
+// Colours as 0x00BBGGRR: neutral greys, no tint.
+const GROUND: u32 = 0x0016_1616;
+const FIELD: u32 = 0x0024_2424;
+const GOLD: u32 = 0x00d0_d0d0;
+const PALE: u32 = 0x00f0_f0f0;
+const DIM: u32 = 0x0090_9090;
+const RED: u32 = 0x0060_60f0;
 
 const ID_OK: usize = 1;
 const ID_CANCEL: usize = 2;
@@ -414,7 +414,9 @@ pub fn ostende(f: &Forma) -> Option<(usize, Vec<Verba>)> {
     let heading_h = 36;
     let text_h = text_lines * 22;
     let fields_h = f.fields.len() as i32 * 58;
-    let height = PAD + heading_h + 8 + text_h + 12 + fields_h + 30 + 40 + 40 + PAD + 40;
+    // buttons stand one above another, the first (the most used) on top
+    let buttons_h = f.buttons.len() as i32 * 44;
+    let height = PAD + heading_h + 8 + text_h + 12 + fields_h + 40 + buttons_h + PAD + 40;
     // SAFETY: plain window creation and messages on this thread's own windows; every
     // string passed lives until the call returns.
     unsafe {
@@ -570,16 +572,25 @@ pub fn ostende(f: &Forma) -> Option<(usize, Vec<Verba>)> {
             small,
         );
         y += 40;
-        let mut x = PAD;
         for (i, b) in f.buttons.iter().enumerate() {
-            let w = (b.chars().count() as i32 * 9 + 36).max(110);
             let (id, style) = if i == 0 {
                 (ID_OK, WS_TABSTOP | BS_DEFPUSHBUTTON)
             } else {
                 (ID_BUTTON + i, WS_TABSTOP)
             };
-            child("BUTTON", b, style, 0, x, y, w, 34, id, small);
-            x += w + 10;
+            child(
+                "BUTTON",
+                b,
+                style,
+                0,
+                PAD,
+                y,
+                W - 2 * PAD - 16,
+                36,
+                id,
+                small,
+            );
+            y += 44;
         }
         let _ = heading;
         LIVE.with(|l| {
@@ -651,7 +662,14 @@ pub fn verba(title: &str, prompts: &[&str]) -> Result<Vec<Verba>, String> {
 fn describe() -> String {
     let found = crate::quaere();
     if found.is_empty() {
-        return "No wand is plugged in.".into();
+        let drives: Vec<String> = (b'A'..=b'Z')
+            .map(|l| format!("{}:", l as char))
+            .filter(|d| Path::new(&format!("{d}\\")).exists())
+            .collect();
+        return format!(
+            "No wand found on {}.\nType its drive (for example D:\\) in the box of the act you choose.",
+            drives.join(" ")
+        );
     }
     let mut out = String::new();
     for p in found {
@@ -895,11 +913,11 @@ pub fn app() {
             text: describe(),
             fields: Vec::new(),
             buttons: vec![
-                "Check words".into(),
-                "Make the wand".into(),
-                "Revoke".into(),
-                "New spare".into(),
-                "Finish making".into(),
+                "Check my words".into(),
+                "Make the wand and its spare".into(),
+                "Make a new spare".into(),
+                "Revoke a lost wand".into(),
+                "Finish an interrupted making".into(),
                 "Close".into(),
             ],
             status: "Plug in a wand, then choose. The list above refreshes when you come back."
@@ -909,8 +927,8 @@ pub fn app() {
         match ostende(&f) {
             Some((0, _)) => check(),
             Some((1, _)) => make(),
-            Some((2, _)) => revoke(),
-            Some((3, _)) => spare(),
+            Some((2, _)) => spare(),
+            Some((3, _)) => revoke(),
             Some((4, _)) => finish_stroke(),
             _ => return,
         }
