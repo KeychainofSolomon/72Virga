@@ -142,13 +142,13 @@ const EM_LIMITTEXT: u32 = 0x00C5;
 const IDC_ARROW: usize = 32512;
 const SW_SHOW: i32 = 5;
 
-// Colours as 0x00BBGGRR: neutral greys, no tint.
-const GROUND: u32 = 0x0016_1616;
-const FIELD: u32 = 0x0024_2424;
-const GOLD: u32 = 0x00d0_d0d0;
-const PALE: u32 = 0x00f0_f0f0;
-const DIM: u32 = 0x0090_9090;
-const RED: u32 = 0x0060_60f0;
+// Colours as 0x00BBGGRR: Spiri72's binding page, deep blue with gold.
+const GROUND: u32 = 0x006e_290e;
+const FIELD: u32 = 0x005e_220b;
+const GOLD: u32 = 0x005c_b8e6;
+const PALE: u32 = 0x00f5_e6e0;
+const DIM: u32 = 0x00cd_a596;
+const RED: u32 = 0x0078_8cff;
 
 const ID_OK: usize = 1;
 const ID_CANCEL: usize = 2;
