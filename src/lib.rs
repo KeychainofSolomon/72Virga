@@ -34,7 +34,7 @@ pub use scrypt::Labor;
 pub use stirps::{Actus, Stirps, MAX_ACTA};
 pub use virga::{
     adde, fac, perfice, quaere, vinculum_valet, Ordo, Secretum, Status, Virga, ANCORAE, DIR, FILE,
-    MIN_VERBA, STIRPS,
+    MAX_VERBA, MIN_VERBA, STIRPS,
 };
 
 /// Overwrites a secret before its memory is released.

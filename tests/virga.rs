@@ -284,3 +284,30 @@ fn a_planted_link_beside_the_lineage_is_not_followed() {
     assert_eq!(fs::read_to_string(&victim).unwrap(), "untouched");
     assert!(Virga::aperi(&b).unwrap().stirps.revocata(va.signum()));
 }
+
+#[test]
+fn a_revoked_wand_gives_no_key() {
+    let (va, _, a, b) = pair("nokey");
+    let mut spare = Virga::aperi(&b).unwrap();
+    spare.revoca(va.signum(), M).unwrap();
+    let mut lost = Virga::aperi(&a).unwrap();
+    lost.scribe_stirpem(&spare.stirps).unwrap();
+    assert!(lost.solve(Secretum::Magister, M).is_err());
+    assert!(lost.solve(Secretum::Ritus, R).is_err());
+}
+
+#[test]
+fn two_acts_on_one_wand_cannot_both_be_written() {
+    // two copies of the spare, as two programs would hold, each adding a new spare
+    let (_, _, _, b) = pair("concurrent");
+    let mut one = Virga::aperi(&b).unwrap();
+    let mut two = Virga::aperi(&b).unwrap();
+    let (c, d) = (stick("concurrent-c"), stick("concurrent-d"));
+    virga::adde(&mut one, &c, M, R, LEVIS).unwrap();
+    assert!(
+        virga::adde(&mut two, &d, M, R, LEVIS).is_err(),
+        "the second finds the first's act"
+    );
+    let on_stick = Virga::aperi(&b).unwrap().stirps;
+    assert_eq!(on_stick.longitudo(), 2);
+}

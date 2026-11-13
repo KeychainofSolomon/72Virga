@@ -12,6 +12,7 @@ use std::ffi::c_void;
 use std::path::{Path, PathBuf};
 use std::ptr::null_mut;
 
+use crate::verba::Verba;
 use crate::{breviter, Labor, Ordo, Secretum, Status, Virga};
 
 type HWND = *mut c_void;
@@ -153,7 +154,7 @@ const ID_OK: usize = 1;
 const ID_CANCEL: usize = 2;
 const ID_BUTTON: usize = 100;
 const ID_FIELD: usize = 200;
-const MAX_WORDS: usize = 256;
+const MAX_WORDS: usize = crate::MAX_VERBA;
 
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
@@ -214,7 +215,7 @@ struct Live {
     status: HWND,
     error: bool,
     chosen: Option<usize>,
-    values: Vec<String>,
+    values: Vec<Verba>,
     brush_ground: HANDLE,
     brush_field: HANDLE,
 }
@@ -285,7 +286,7 @@ fn finish(h: HWND, chosen: Option<usize>) {
         };
         live.chosen = chosen;
         if chosen.is_some() {
-            live.values = live.edits.iter().map(|&e| text_of(e)).collect();
+            live.values = live.edits.iter().map(|&e| Verba::new(text_of(e))).collect();
         }
         live.edits.clone()
     });
@@ -400,7 +401,7 @@ fn class() -> Vec<u16> {
 
 /// Shows a form and waits. Returns the button chosen (0 for the first, also on Enter) and
 /// the fields' values, or `None` if the window was closed.
-pub fn ostende(f: &Forma) -> Option<(usize, Vec<String>)> {
+pub fn ostende(f: &Forma) -> Option<(usize, Vec<Verba>)> {
     let class = class();
     const W: i32 = 600;
     const PAD: i32 = 24;
@@ -619,7 +620,7 @@ pub fn ostende(f: &Forma) -> Option<(usize, Vec<String>)> {
 }
 
 /// Asks for words in a window: one dotted field per prompt.
-pub fn verba(title: &str, prompts: &[&str]) -> Result<Vec<String>, String> {
+pub fn verba(title: &str, prompts: &[&str]) -> Result<Vec<Verba>, String> {
     let repeats_previous = |p: &str| p.contains("again");
     let fields = prompts
         .iter()
@@ -693,7 +694,7 @@ fn word_fields() -> Vec<Campus> {
 }
 
 /// Shows `f` until `act` succeeds or the Operator goes back; the result's text is shown.
-fn act(mut f: Forma, act: impl Fn(&[String]) -> Result<String, String>) {
+fn act(mut f: Forma, act: impl Fn(&[Verba]) -> Result<String, String>) {
     loop {
         let Some((0, values)) = ostende(&f) else {
             return;
@@ -714,7 +715,7 @@ fn act(mut f: Forma, act: impl Fn(&[String]) -> Result<String, String>) {
             Err(e) => {
                 for (field, v) in f.fields.iter_mut().zip(values) {
                     if !field.secret {
-                        field.value = v;
+                        field.value = v.to_string();
                     }
                 }
                 f.status = e;
@@ -757,7 +758,7 @@ fn make() {
         |v| {
             same(&v[3], &v[4])?;
             same(&v[5], &v[6])?;
-            let (a, b) = crate::fac(Path::new(&v[0]), Path::new(&v[1]), &v[3], &v[5], &v[2], Labor::VERA)?;
+            let (a, b) = crate::fac(Path::new(&*v[0]), Path::new(&*v[1]), &v[3], &v[5], &v[2], Labor::VERA)?;
             Ok(format!(
                 "The wand {} is on {}.\nThe spare {} is on {}.\n\nWrite both fingerprints down. Keep the spare apart from the wand.",
                 breviter(a.signum()),
@@ -785,7 +786,7 @@ fn check() {
             error: false,
         },
         |v| {
-            let w = Virga::aperi(&PathBuf::from(&v[0]))?;
+            let w = Virga::aperi(&PathBuf::from(&*v[0]))?;
             w.solve(Secretum::Magister, &v[1])
                 .map_err(|e| format!("master secret: {e}"))?;
             w.solve(Secretum::Ritus, &v[2])
@@ -819,7 +820,7 @@ fn revoke() {
             error: false,
         },
         |v| {
-            let mut w = Virga::aperi(&PathBuf::from(&v[0]))?;
+            let mut w = Virga::aperi(&PathBuf::from(&*v[0]))?;
             let wanted: String = v[1].chars().filter(|c| *c != '-' && !c.is_whitespace()).collect::<String>().to_lowercase();
             if wanted.len() < 8 {
                 return Err("give at least the first 8 digits of the fingerprint".into());
@@ -856,8 +857,8 @@ fn spare() {
             error: false,
         },
         |v| {
-            let mut w = Virga::aperi(&PathBuf::from(&v[0]))?;
-            let n = crate::adde(&mut w, Path::new(&v[1]), &v[2], &v[3], Labor::VERA)?;
+            let mut w = Virga::aperi(&PathBuf::from(&*v[0]))?;
+            let n = crate::adde(&mut w, Path::new(&*v[1]), &v[2], &v[3], Labor::VERA)?;
             Ok(format!("The spare {} is on {}.", breviter(n.signum()), n.radix().display()))
         },
     );
@@ -875,7 +876,7 @@ fn finish_stroke() {
             error: false,
         },
         |v| {
-            let w = crate::perfice(Path::new(&v[0]))?;
+            let w = crate::perfice(Path::new(&*v[0]))?;
             Ok(format!("{} is in place on {}.", breviter(w.signum()), w.radix().display()))
         },
     );

@@ -17,7 +17,10 @@ pub const STIRPS: &str = "stirps.txt";
 pub const ANCORAE: &str = "ancorae";
 /// The fewest characters the Operator's words may have.
 pub const MIN_VERBA: usize = 12;
+/// The most characters the Operator's words may have.
+pub const MAX_VERBA: usize = 256;
 const STAGED: &str = "VIRGA.novum";
+const SERA: &str = "sera";
 const MAX_FILE: u64 = 1 << 20;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -131,6 +134,9 @@ fn sanus(nomen: &str) -> Result<(), String> {
 
 fn verba_valida(magistri: &str, ritus: &str) -> Result<(), String> {
     for w in [magistri, ritus] {
+        if w.chars().count() > MAX_VERBA {
+            return Err(format!("the words must be at most {MAX_VERBA} characters"));
+        }
         if w.chars().count() < MIN_VERBA {
             return Err(format!(
                 "the words must be at least {MIN_VERBA} characters; a short sentence is best"
@@ -368,6 +374,10 @@ impl Virga {
     /// Unlocks one secret with the words. The key is returned for one act and wiped when
     /// dropped. Wrong words, or a secret moved from another wand or slot, fail alike.
     pub fn solve(&self, which: Secretum, words: &str) -> Result<Clavis, String> {
+        // unlocking is not authority, but a revoked wand gives no key at all (review V-03)
+        if self.status() != Status::Vivit {
+            return Err("this wand has been revoked: its secrets open nothing".into());
+        }
         let (a, own) = match which {
             Secretum::Magister => (&self.arcae[0], &self.magister),
             Secretum::Ritus => (&self.arcae[1], &self.ritus),
@@ -389,14 +399,32 @@ impl Virga {
     }
 
     /// Writes a later copy of the lineage onto this wand. Never shortens or rewrites it.
+    /// Under the wand's lock, the copy on the stick is read again and joined, so two acts
+    /// at once can never leave the lineage inconsistent: the second finds the first's act
+    /// and is refused as diverged (review V-05).
     pub fn scribe_stirpem(&mut self, s: &Stirps) -> Result<(), String> {
-        let later = Stirps::concilia(&self.stirps, s)?;
-        if later == self.stirps {
-            return Ok(());
+        let _held = self.sera()?;
+        let on_stick = Stirps::decode(&read_bounded(&self.radix.join(STIRPS))?)?;
+        let known = Stirps::concilia(&on_stick, &self.stirps)?;
+        let later = Stirps::concilia(&known, s)?;
+        if later != on_stick {
+            replace_file(&self.radix.join(STIRPS), &later.encode())?;
         }
-        replace_file(&self.radix.join(STIRPS), &later.encode())?;
         self.stirps = later;
         Ok(())
+    }
+
+    /// The wand's lock: one act that writes to it at a time.
+    fn sera(&self) -> Result<fs::File, String> {
+        let f = fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(self.radix.join(SERA))
+            .map_err(|e| format!("cannot lock the wand: {e}"))?;
+        f.try_lock()
+            .map_err(|_| "another act is using this wand; wait for it to finish".to_string())?;
+        Ok(f)
     }
 
     /// This wand revokes the lost wand `amissa`, with this wand's master words.

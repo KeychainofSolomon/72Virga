@@ -74,7 +74,7 @@ fn show(v: &Virga) {
     }
 }
 
-fn words() -> Result<(String, String), String> {
+fn words() -> Result<(virga::verba::Verba, virga::verba::Verba), String> {
     say("Choose the words for the MASTER secret. They prove you yourself, and are asked only");
     say("outside a rite. Use a sentence you will not forget, at least 12 characters.");
     let m = verba::elige("master words")?;
