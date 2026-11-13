@@ -270,3 +270,17 @@ fn an_interrupted_stroke_is_finished() {
     let empty = stick("perfice-empty");
     assert!(virga::perfice(&empty).is_err());
 }
+
+#[cfg(unix)]
+#[test]
+fn a_planted_link_beside_the_lineage_is_not_followed() {
+    // second review: the lineage was rewritten through the fixed name stirps.novum
+    let (va, _, _, b) = pair("link");
+    let victim = stick("link-victim").join("precious.txt");
+    fs::write(&victim, "untouched").unwrap();
+    std::os::unix::fs::symlink(&victim, b.join("VIRGA").join("stirps.novum")).unwrap();
+    let mut spare = Virga::aperi(&b).unwrap();
+    spare.revoca(va.signum(), M).unwrap();
+    assert_eq!(fs::read_to_string(&victim).unwrap(), "untouched");
+    assert!(Virga::aperi(&b).unwrap().stirps.revocata(va.signum()));
+}

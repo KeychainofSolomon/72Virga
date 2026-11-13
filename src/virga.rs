@@ -159,18 +159,38 @@ fn read_bounded(path: &Path) -> Result<String, String> {
     fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))
 }
 
+/// Writes a new file. Never through an existing name: a planted link or file at `path`
+/// makes the write fail instead of being followed.
 fn write_synced(path: &Path, text: &str) -> Result<(), String> {
-    let mut f =
-        fs::File::create(path).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|e| format!("cannot write {}: {e}", path.display()))?;
     f.write_all(text.as_bytes())
         .and_then(|_| f.sync_all())
         .map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
+/// Replaces a file through a fresh temporary file with an unpredictable name beside it,
+/// created new (never following a planted link), then renamed into place.
 fn replace_file(path: &Path, text: &str) -> Result<(), String> {
-    let tmp = path.with_extension("novum");
-    write_synced(&tmp, text)?;
-    fs::rename(&tmp, path).map_err(|e| format!("cannot replace {}: {e}", path.display()))
+    let mut r = [0u8; 12];
+    os::random(&mut r)?;
+    let name = format!(
+        ".{}.{}.novum",
+        path.file_name().and_then(|n| n.to_str()).unwrap_or("virga"),
+        hex(&r)
+    );
+    let tmp = path.with_file_name(name);
+    if let Err(e) = write_synced(&tmp, text) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    fs::rename(&tmp, path).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        format!("cannot replace {}: {e}", path.display())
+    })
 }
 
 fn now() -> u64 {
