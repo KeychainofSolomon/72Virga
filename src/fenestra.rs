@@ -142,13 +142,14 @@ const EM_LIMITTEXT: u32 = 0x00C5;
 const IDC_ARROW: usize = 32512;
 const SW_SHOW: i32 = 5;
 
-// Colours as 0x00BBGGRR: Spiri72's binding page, deep blue with gold.
-const GROUND: u32 = 0x006e_290e;
-const FIELD: u32 = 0x005e_220b;
-const GOLD: u32 = 0x005c_b8e6;
-const PALE: u32 = 0x00f5_e6e0;
-const DIM: u32 = 0x00cd_a596;
-const RED: u32 = 0x0078_8cff;
+// Colours as 0x00BBGGRR: Spiri72's binding page, black ground with white text and lines.
+// The accent and the warning are white too; a warning is told by its words.
+const GROUND: u32 = 0x0000_0000;
+const FIELD: u32 = 0x000b_0b0b;
+const GOLD: u32 = 0x00ff_ffff;
+const PALE: u32 = 0x00f2_f2f2;
+const DIM: u32 = 0x009c_9c9c;
+const RED: u32 = 0x00ff_ffff;
 
 const ID_OK: usize = 1;
 const ID_CANCEL: usize = 2;
@@ -443,8 +444,9 @@ pub fn ostende(f: &Forma) -> Option<(usize, Vec<Verba>)> {
         }
         let dark: i32 = 1;
         DwmSetWindowAttribute(win, 20, &dark as *const i32 as *const c_void, 4);
-        let face = wide("Georgia");
-        let big = CreateFontW(-26, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, face.as_ptr());
+        // the binding page's face, Palatino, at its plain weight
+        let face = wide("Palatino Linotype");
+        let big = CreateFontW(-28, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, face.as_ptr());
         let body = CreateFontW(-17, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, face.as_ptr());
         let ui_face = wide("Segoe UI");
         let small = CreateFontW(-15, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, ui_face.as_ptr());
